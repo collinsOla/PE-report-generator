@@ -1,0 +1,46 @@
+# News Monitoring system
+
+This project is a News monitoring system, which accesses modern news stories across a variety of different sectors and industries, in order to attain information to generate a report regarding potential private equity deal opportunities in the UK. This leverages both LLMs and Statistical methods to ensure this Data is of the highest quality, to provide a thorough insight - which will be detailed on below. Upon accessing the system, users will be given the opportunitity to either generate a report into a given directory of their choice, which is presented in a pdf format and saved. Alongside this, they can also choose to option to generate more content for the database system, ensuring that this system is constantly refreshed and updated with the most recent news, leading to much more judicioius and accurate reports. A user can choose to continue iteratively at their will, until they quit in which the system will close. For the interface, I opted for a lightweight command-line interface, as this acts as a minor intermediatery space between the user and their desired report, where the focus has been placed on to ensure that this can be easily comprehended and distributed as a standard pdf.
+
+## The accessing of Data
+
+The key foundation of this system is the accessing of it's data, as all the insights directly stem from it, thus, it was important that this was done in an efficient manner.In order to access current news stories, I used the free news api, which allowed refined searches meaning I was able to specifically filter UK articles. Alongside this, I was able to query specific articles involving specific keywords that were likely to have a relation to privare equity and investment opportunity, such as:
+
+["finance", "business", "economics", "investing", "private equity", "venture capital", "buyout", "fundraising", "mergers", "acquisitions", "portfolio companies", "investment opportunities", "capital markets", "growth equity", "financial transactions", "deal flow", "corporate finance", "investment strategy", "fund management", "capital raising"]
+
+Upon retrieving this data, I leverged the Gemini API to allow a light analysis to be preformed, to transform the JSON data into the form of my pydantic classes, allowing a better structure to aid in the further processing of the data. 
+
+class Article(BaseModel):
+    companies: List[Company]       # List of Company objects
+    sectors: List[Sector]          # List of Sector objects
+    summary: str
+    relevance: int                 # 1-10 scale
+    businesses: Optional[List[str]] = None
+    extra_info: Optional[List[str]] = None
+    url: Optional[str] = None
+
+In this case, I opted for the gemini flash model in the parsing of the articles into this pydantic class structure, as it has been stated to be tailored towards larger data sets, whilst ensuring a feasable reponse time.
+
+## The Storage of Data
+
+Traditionally, may datasets opt for flat-file storage firms such as CSV files or Excel tables. However, in this case I opted for an SQL relational database to accurately model the many-to-many relationships between a single article, the companies it involves and the sectors it involves. This consisted of the tables: Article, Article_Company, Article_Sector, company, and sector in order to normalise the data and flatten this many-many structure leading to more efficient storage and effective queries. 
+
+This integrated very well with the pandas library, which was the foundation of the analysis of this data.
+
+## The anaylsis of Data
+
+Within the analysis, I placed a big emphasis on the sectors and companies, as chains of them connecting can directly provide an insight into specific occurences betweens different categories that may be heavily insightful within the world of private equity. 
+
+To begin, I first analysed each sector and company autonomously, to identify which contain the highest mean of relevancy based on the initial generated index, alongside the frequency articles that mentioned them. Based on this, I was already able to visualise what sectors were likely to be hot topics of the report, such as technology and AI as well as the companies that best stand out within them. To ensure that these factors were considered proportionally, I was able to develop a weighted index, calculated by the average relevancy multiplied by the log of the sum of mentions, creating a value which accurately described the how relevant one of these entities are.
+
+Adding on to this, I was able to represent the series of connections between sectors and companies as a weighted graph using the networkx library. This allowed the computation of eigen centrality, a more hollistic and iterative index to show the importance of an entity (sector or company) in terms of how important it's connections are, similar to the pagerank algorithmn. 
+
+Thus, upon normalising this metric to values between 0 and 1, I was able to combine these metrics to create final dataframes, selectively filtering companies and sectors that excell (are part of the upper 2 quartiles) of every single metric; as the data volume grows - I intend to continuously increase this to ensure only the highest quality of entities are used, whilst ensuring the volume is large enough to generate meaningful insights.
+
+Finally, I used these to filter only articles that are present in the upper percentile of relevance, whilst ensuring that these articles mention these filtered sectors and companies, allowing a circular and multi-layered analysis to be reached within the report. 
+
+## The Presentation of Data: Report generation
+
+Now consequently, with all my processed and filtered elements of data, I used pandas to convert these into JSON format, in which I was able to embed this into my prompt, describing vididly how Gemini should leverage this data to generate a report on potential PE deals in the UK.
+
+Finally, with this acquired I parsed this into markdown, then used the fpdf library to convert this to a pdf which I believe is the most sensible file format for a report of this manner.
